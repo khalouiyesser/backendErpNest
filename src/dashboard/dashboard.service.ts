@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Purchase, PurchaseDocument } from '../purchases/purchase.schema';
 import { Product, ProductDocument } from '../products/product.schema';
 import { Client, ClientDocument } from '../clients/client.schema';
-import {Vente, VenteDocument} from "../sales/vente.schema";
+import {Vente, VenteDocument} from "../ventes/vente.schema";
 
 @Injectable()
 export class DashboardService {

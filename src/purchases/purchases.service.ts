@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Purchase, PurchaseDocument } from './purchase.schema';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { ProductsService } from '../products/products.service';
-import { SuppliersService } from '../suppliers/suppliers.service';
+import { FournisseursService } from '../Fournisseurs/Fournisseurs.service';
 import { PaymentAchatService } from '../payment-achat/payment-achat.service';
 import { PaymentAchatDocument } from '../payment-achat/entities/payment-achat.entity';
 
@@ -13,12 +13,12 @@ export class PurchasesService {
   constructor(
       @InjectModel(Purchase.name) private purchaseModel: Model<PurchaseDocument>,
       private productsService: ProductsService,
-      private suppliersService: SuppliersService,
+      private FournisseursService: FournisseursService,
       private paymentAchatService: PaymentAchatService,
   ) {}
 
   async create(dto: CreatePurchaseDto, userId: string): Promise<PurchaseDocument> {
-    const supplier = await this.suppliersService.findOne(dto.supplierId, userId);
+    const Fournisseur = await this.FournisseursService.findOne(dto.FournisseurId, userId);
 
     let totalHT = 0;
     let totalTTC = 0;
@@ -45,8 +45,8 @@ export class PurchasesService {
     const amountRemaining = totalTTC - initialPayment;
 
     const purchase = new this.purchaseModel({
-      supplierId: new Types.ObjectId(dto.supplierId),
-      supplierName: supplier.name,
+      FournisseurId: new Types.ObjectId(dto.FournisseurId),
+      FournisseurName: Fournisseur.name,
       items,
       totalHT,
       totalTTC,
@@ -63,7 +63,7 @@ export class PurchasesService {
     if (initialPayment > 0) {
       const savedPayment = await this.paymentAchatService.createFromAchat(
           userId,
-          dto.supplierId,
+          dto.FournisseurId,
           initialPayment,
           savedPurchase._id.toString(),
       );
@@ -71,9 +71,9 @@ export class PurchasesService {
       savedPurchase.payments.push(savedPayment._id);
       await savedPurchase.save();
 
-      await this.suppliersService.updateDebt(dto.supplierId, amountRemaining);
+      await this.FournisseursService.updateDebt(dto.FournisseurId, amountRemaining);
     } else {
-      await this.suppliersService.updateDebt(dto.supplierId, amountRemaining);
+      await this.FournisseursService.updateDebt(dto.FournisseurId, amountRemaining);
     }
 
     // Mettre à jour le stock
@@ -86,7 +86,7 @@ export class PurchasesService {
 
   async findAll(userId: string, query?: any): Promise<PurchaseDocument[]> {
     const filter: any = { userId: new Types.ObjectId(userId) };
-    if (query?.search) filter.$or = [{ supplierName: { $regex: query.search, $options: 'i' } }];
+    if (query?.search) filter.$or = [{ FournisseurName: { $regex: query.search, $options: 'i' } }];
     if (query?.status) filter.status = query.status;
     const sort: any = query?.sortBy
         ? { [query.sortBy]: query.sortOrder === 'desc' ? -1 : 1 }
@@ -109,7 +109,7 @@ export class PurchasesService {
     // Utiliser PaymentAchatService pour créer le paiement
     const savedPayment = await this.paymentAchatService.createFromAchat(
         userId,
-        purchase.supplierId.toString(),
+        purchase.FournisseurId.toString(),
         amount,
         purchase._id.toString(),
     );
@@ -119,7 +119,7 @@ export class PurchasesService {
     purchase.amountPaid += amount;
     purchase.amountRemaining -= amount;
 
-    await this.suppliersService.updateDebt(purchase.supplierId.toString(), -amount);
+    await this.FournisseursService.updateDebt(purchase.FournisseurId.toString(), -amount);
 
     return purchase.save();
   }
@@ -151,7 +151,7 @@ export class PurchasesService {
 
     const purchases = await this.purchaseModel
         .find({
-          supplierId: new Types.ObjectId(fournisseurId),
+          FournisseurId: new Types.ObjectId(fournisseurId),
           userId:        new Types.ObjectId(userId),
         })
         .sort({ createdAt: -1 })

@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Purchase, PurchaseDocument } from '../purchases/purchase.schema';
 import { Charge, ChargeDocument } from '../charges/charge.schema';
-import {Vente, VenteDocument} from "../sales/vente.schema";
+import {Vente, VenteDocument} from "../ventes/vente.schema";
 
 @Injectable()
 export class AccountingService {

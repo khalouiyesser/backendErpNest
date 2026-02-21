@@ -21,7 +21,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  supplierIds?: string[];
+  FournisseurIds?: string[];
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()

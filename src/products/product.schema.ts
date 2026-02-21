@@ -14,8 +14,8 @@ export class Product {
   @Prop({ default: 'unité' })
   unit: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Supplier' }], default: [] })
-  supplierIds: Types.ObjectId[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Fournisseur' }], default: [] })
+  FournisseurIds: Types.ObjectId[];
 
   @Prop({ default: 0 })
   stockQuantity: number;

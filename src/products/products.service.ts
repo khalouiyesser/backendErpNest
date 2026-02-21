@@ -14,7 +14,7 @@ export class ProductsService {
   async create(dto: CreateProductDto, userId: string): Promise<ProductDocument> {
     const product = new this.productModel({
       ...dto,
-      supplierIds: dto.supplierIds?.map((id) => new Types.ObjectId(id)) || [],
+      FournisseurIds: dto.FournisseurIds?.map((id) => new Types.ObjectId(id)) || [],
       userId: new Types.ObjectId(userId),
     });
     return product.save();
@@ -29,26 +29,26 @@ export class ProductsService {
       ];
     }
     const sort: any = query?.sortBy ? { [query.sortBy]: query.sortOrder === 'desc' ? -1 : 1 } : { createdAt: -1 };
-    return this.productModel.find(filter).populate('supplierIds').sort(sort).exec();
+    return this.productModel.find(filter).populate('FournisseurIds').sort(sort).exec();
   }
 
   async findOne(id: string, userId: string): Promise<ProductDocument> {
     const p = await this.productModel
       .findOne({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) })
-      .populate('supplierIds');
+      .populate('FournisseurIds');
     if (!p) throw new NotFoundException('Product not found');
     return p;
   }
 
   async update(id: string, userId: string, dto: UpdateProductDto): Promise<ProductDocument> {
     const update: any = { ...dto };
-    if (dto.supplierIds) {
-      update.supplierIds = dto.supplierIds.map((sid) => new Types.ObjectId(sid));
+    if (dto.FournisseurIds) {
+      update.FournisseurIds = dto.FournisseurIds.map((sid) => new Types.ObjectId(sid));
     }
     const p = await this.productModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
       update, { new: true }
-    ).populate('supplierIds');
+    ).populate('FournisseurIds');
     if (!p) throw new NotFoundException('Product not found');
     return p;
   }

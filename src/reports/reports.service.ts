@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PurchasesService } from '../purchases/purchases.service';
 import { ChargesService } from '../charges/charges.service';
 import { ProductsService } from '../products/products.service';
-import {VentesService} from "../sales/ventes.service";
+import {VentesService} from "../ventes/ventes.service";
 
 @Injectable()
 export class ReportsService {

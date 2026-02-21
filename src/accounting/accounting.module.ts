@@ -4,7 +4,7 @@ import { AccountingService } from './accounting.service';
 import { AccountingController } from './accounting.controller';
 import { Purchase, PurchaseSchema } from '../purchases/purchase.schema';
 import { Charge, ChargeSchema } from '../charges/charge.schema';
-import {Vente, Venteschema} from "../sales/vente.schema";
+import {Vente, Venteschema} from "../ventes/vente.schema";
 
 @Module({
   imports: [

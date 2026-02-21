@@ -6,11 +6,11 @@ export type PurchaseDocument = Purchase & Document;
 
 @Schema({ timestamps: true })
 export class Purchase {
-  @Prop({ type: Types.ObjectId, ref: 'Supplier', required: true })
-  supplierId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Fournisseur', required: true })
+  FournisseurId: Types.ObjectId;
 
   @Prop({ required: true })
-  supplierName: string;
+  FournisseurName: string;
 
   @Prop({
     type: [

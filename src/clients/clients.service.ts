@@ -10,7 +10,7 @@ import { Model, Types } from 'mongoose';
 import { Client, ClientDocument } from './client.schema';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-import {VentesService} from "../sales/ventes.service";
+import {VentesService} from "../ventes/ventes.service";
 
 @Injectable()
 export class ClientsService {

@@ -20,7 +20,7 @@ export class PaymentAchat {
     note?: string;
 
     @ApiProperty({ description: 'ID du fournisseur' })
-    @Prop({ type: Types.ObjectId, ref: 'Supplier', required: true })
+    @Prop({ type: Types.ObjectId, ref: 'Fournisseur', required: true })
     fournisseurId: Types.ObjectId;
 
     @ApiProperty({ description: 'ID de l’utilisateur qui enregistre le paiement' })

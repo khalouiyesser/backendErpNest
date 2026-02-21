@@ -4,7 +4,7 @@ import { PurchasesService } from './purchases.service';
 import { PurchasesController } from './purchases.controller';
 import { Purchase, PurchaseSchema } from './purchase.schema';
 import { ProductsModule } from '../products/products.module';
-import { SuppliersModule } from '../suppliers/suppliers.module';
+import { FournisseursModule } from '../Fournisseurs/Fournisseurs.module';
 import { PaymentAchatModule } from '../payment-achat/payment-achat.module';
 
 @Module({
@@ -13,11 +13,11 @@ import { PaymentAchatModule } from '../payment-achat/payment-achat.module';
       { name: Purchase.name, schema: PurchaseSchema },
     ]),
     ProductsModule,
-    forwardRef(() => SuppliersModule), // ✅ IMPORTANT (circular dependency)
+    forwardRef(() => FournisseursModule), // ✅ IMPORTANT (circular dependency)
     forwardRef(() => PaymentAchatModule),
   ],
   controllers: [PurchasesController],
   providers: [PurchasesService],
-  exports: [PurchasesService], // ❌ supprimer SuppliersModule d'ici
+  exports: [PurchasesService], // ❌ supprimer FournisseursModule d'ici
 })
 export class PurchasesModule {}

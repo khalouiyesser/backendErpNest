@@ -4,7 +4,7 @@ import { PaymentVenteService } from './payment-vente.service';
 import { PaymentVenteController } from './payment-vente.controller';
 import { PaymentVente, PaymentVenteSchema } from './entities/payment-vente.entity';
 import {PurchasesModule} from "../purchases/purchases.module";
-import {VentesModule} from "../sales/ventes.module";
+import {VentesModule} from "../ventes/ventes.module";
 
 @Module({
   imports: [

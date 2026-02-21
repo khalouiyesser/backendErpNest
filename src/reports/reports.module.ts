@@ -4,7 +4,7 @@ import { ReportsService } from './reports.service';
 import { PurchasesModule } from '../purchases/purchases.module';
 import { ChargesModule } from '../charges/charges.module';
 import { ProductsModule } from '../products/products.module';
-import {VentesModule} from "../sales/ventes.module";
+import {VentesModule} from "../ventes/ventes.module";
 
 @Module({
   imports: [VentesModule, PurchasesModule, ChargesModule, ProductsModule],

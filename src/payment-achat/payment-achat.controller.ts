@@ -49,7 +49,7 @@ export class PaymentAchatController {
     return this.paymentAchatService.findOne(id, req.user.userId);
   }
 
-  @Get('user/:userId/supplier/:fournisseurId')
+  @Get('user/:userId/Fournisseur/:fournisseurId')
   @ApiOperation({ summary: 'Récupérer les paiements par utilisateur et fournisseur' })
   @ApiParam({ name: 'userId', description: 'ID de l’utilisateur' })
   @ApiParam({ name: 'fournisseurId', description: 'ID du fournisseur' })

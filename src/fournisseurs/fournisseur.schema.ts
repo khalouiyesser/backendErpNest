@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type SupplierDocument = Supplier & Document;
+export type FournisseurDocument = Fournisseur & Document;
 
 @Schema({ timestamps: true })
-export class Supplier {
+export class Fournisseur {
   @Prop({ required: true })
   name: string;
 
@@ -27,5 +27,5 @@ export class Supplier {
   userId: Types.ObjectId;
 }
 
-export const SupplierSchema = SchemaFactory.createForClass(Supplier);
-SupplierSchema.index({ phone: 1, userId: 1 }, { unique: true });
+export const FournisseurSchema = SchemaFactory.createForClass(Fournisseur);
+FournisseurSchema.index({ phone: 1, userId: 1 }, { unique: true });

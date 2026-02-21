@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
-import { SuppliersModule } from './suppliers/suppliers.module';
+import { FournisseursModule } from './Fournisseurs/Fournisseurs.module';
 import { ProductsModule } from './products/products.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { StockModule } from './stock/stock.module';
@@ -17,7 +17,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentAchatModule } from './payment-achat/payment-achat.module';
 import { PaymentVenteModule } from './payment-vente/payment-vente.module';
-import {VentesModule} from "./sales/ventes.module";
+import {VentesModule} from "./ventes/ventes.module";
 
 @Module({
   imports: [
@@ -32,7 +32,7 @@ import {VentesModule} from "./sales/ventes.module";
     AuthModule,
     UsersModule,
     ClientsModule,
-    SuppliersModule,
+    FournisseursModule,
     ProductsModule,
     VentesModule,
     PurchasesModule,

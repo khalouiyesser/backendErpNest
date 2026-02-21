@@ -13,7 +13,7 @@ export class PurchaseItemDto {
 export class CreatePurchaseDto {
   @ApiProperty()
   @IsNotEmpty() @IsString()
-  supplierId: string;
+  FournisseurId: string;
 
   @ApiProperty({ type: [PurchaseItemDto] })
   @IsArray() @ValidateNested({ each: true }) @Type(() => PurchaseItemDto)
