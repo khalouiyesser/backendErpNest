@@ -1,10 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Purchase, PurchaseDocument } from './purchase.schema';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { ProductsService } from '../products/products.service';
-import { FournisseursService } from '../Fournisseurs/Fournisseurs.service';
+import { FournisseursService } from '../fournisseurs/fournisseurs.service';
 import { PaymentAchatService } from '../payment-achat/payment-achat.service';
 import { PaymentAchatDocument } from '../payment-achat/entities/payment-achat.entity';
 
@@ -13,7 +13,7 @@ export class PurchasesService {
   constructor(
       @InjectModel(Purchase.name) private purchaseModel: Model<PurchaseDocument>,
       private productsService: ProductsService,
-      private FournisseursService: FournisseursService,
+      @Inject(forwardRef(() => FournisseursService)) private FournisseursService: FournisseursService,
       private paymentAchatService: PaymentAchatService,
   ) {}
 
@@ -146,8 +146,6 @@ export class PurchasesService {
 
 
   async getAchatByFournisseur(userId: string, fournisseurId: string) {
-
-
 
     const purchases = await this.purchaseModel
         .find({

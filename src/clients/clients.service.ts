@@ -10,14 +10,14 @@ import { Model, Types } from 'mongoose';
 import { Client, ClientDocument } from './client.schema';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-import {VentesService} from "../ventes/ventes.service";
+import { VentesService } from '../ventes/ventes.service';
 
 @Injectable()
 export class ClientsService {
   constructor(
-      @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
-      @Inject(forwardRef(() => VentesService))
-      private VenteService: VentesService,
+    @InjectModel(Client.name) private clientModel: Model<ClientDocument>,
+    @Inject(forwardRef(() => VentesService))
+    private VenteService: VentesService,
   ) {}
 
   async create(createClientDto: CreateClientDto, userId: string): Promise<ClientDocument> {
@@ -25,7 +25,7 @@ export class ClientsService {
       phone: createClientDto.phone,
       userId: new Types.ObjectId(userId),
     });
-    if (existing) throw new ConflictException('Phone number already exists for this user');
+    if (existing) throw new ConflictException('Ce numéro de téléphone est déjà utilisé');
 
     const client = new this.clientModel({
       ...createClientDto,
@@ -35,8 +35,8 @@ export class ClientsService {
   }
 
   async findAll(
-      userId: string,
-      query?: { search?: string; sortBy?: string; sortOrder?: 'asc' | 'desc'; isActive?: boolean },
+    userId: string,
+    query?: { search?: string; sortBy?: string; sortOrder?: 'asc' | 'desc'; isActive?: boolean },
   ): Promise<ClientDocument[]> {
     const filter: any = { userId: new Types.ObjectId(userId) };
 
@@ -46,6 +46,7 @@ export class ClientsService {
         { phone: { $regex: query.search, $options: 'i' } },
         { email: { $regex: query.search, $options: 'i' } },
         { sector: { $regex: query.search, $options: 'i' } },
+        { firstName: { $regex: query.search, $options: 'i' } },
       ];
     }
 
@@ -68,17 +69,17 @@ export class ClientsService {
       _id: new Types.ObjectId(id),
       userId: new Types.ObjectId(userId),
     });
-    if (!client) throw new NotFoundException('Client not found');
+    if (!client) throw new NotFoundException('Client introuvable');
     return client;
   }
 
   async update(id: string, userId: string, updateClientDto: UpdateClientDto): Promise<ClientDocument> {
     const client = await this.clientModel.findOneAndUpdate(
-        { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
-        updateClientDto,
-        { new: true },
+      { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
+      updateClientDto,
+      { new: true },
     );
-    if (!client) throw new NotFoundException('Client not found');
+    if (!client) throw new NotFoundException('Client introuvable');
     return client;
   }
 
@@ -87,35 +88,34 @@ export class ClientsService {
       _id: new Types.ObjectId(id),
       userId: new Types.ObjectId(userId),
     });
-    if (!client) throw new NotFoundException('Client not found');
+    if (!client) throw new NotFoundException('Client introuvable');
   }
 
   async getClientStats(clientId: string, userId: string) {
     const client = await this.findOne(clientId, userId);
 
-    const [stats, recentVentes] = await Promise.all([
+    const [stats, recentSales] = await Promise.all([
       this.VenteService.getStatsByClient(clientId, userId),
-      this.VenteService.findByClient(clientId, userId, 10),
+      this.VenteService.findByClient(clientId, userId, 100),
     ]);
 
     const aggregated = stats[0] || { totalRevenue: 0, totalPaid: 0, count: 0 };
 
-
     return {
       client,
-      creditAvailable: client.creditLimit - client.creditUsed,
+      creditAvailable: (client.creditLimit || 0) - (client.creditUsed || 0),
       totalRevenue: aggregated.totalRevenue,
       totalPaid: aggregated.totalPaid,
       totalCredit: aggregated.totalRevenue - aggregated.totalPaid,
       count: aggregated.count,
-      recentVentes,
+      recentSales, // ← Correction: était "recentVentes", le front attend "recentSales"
     };
   }
 
   async updateCredit(clientId: string, amount: number, userId: string): Promise<void> {
     await this.clientModel.findOneAndUpdate(
-        { _id: new Types.ObjectId(clientId), userId: new Types.ObjectId(userId) },
-        { $inc: { creditUsed: amount } },
+      { _id: new Types.ObjectId(clientId), userId: new Types.ObjectId(userId) },
+      { $inc: { creditUsed: amount } },
     );
   }
 }
