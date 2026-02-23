@@ -37,23 +37,26 @@ export class UsersService {
 
     return user;
   }
-  async createAdmin(createUserDto: CreateUserDto): Promise<UserDocument> {
-    const existing = await this.userModel.findOne({ email: createUserDto.email });
+
+  async createAdmin(email: string,password:string): Promise<UserDocument> {
+    const existing = await this.userModel.findOne({ email: email });
     if (existing) throw new ConflictException('Email already exists');
 
-    const tempPassword = this.generateTempPassword();
-    const hashed = await bcrypt.hash(tempPassword, 12);
+    // const tempPassword = this.generateTempPassword();
+    const hashed = await bcrypt.hash(password, 12);
 
     const user = new this.userModel({
-      ...createUserDto,
+      phone: "00000000",
+      name: "yesser",
+      email: email,
       password: hashed,
-      role: createUserDto.role,
+      role: "admin",
       mustChangePassword: true,
     });
     await user.save();
 
     // Send welcome email with temp password
-    await this.mailService.sendWelcomeEmail(user.email, user.name, tempPassword);
+    await this.mailService.sendWelcomeEmail(user.email, user.name, password);
 
     return user;
   }

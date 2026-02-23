@@ -16,8 +16,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with email and password' })
   login(@Request() req, @Body() _loginDto: LoginDto) {
     console.log(11111111111111111111)
+    console.log(_loginDto)
     return this.authService.login(req.user);
   }
+
+
+
+
+
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
