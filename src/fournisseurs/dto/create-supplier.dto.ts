@@ -24,4 +24,5 @@ export class CreateFournisseurDto {
   @IsOptional()
   @IsString()
   address?: string;
+
 }

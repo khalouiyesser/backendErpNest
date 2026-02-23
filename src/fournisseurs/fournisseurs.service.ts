@@ -55,4 +55,72 @@ export class FournisseursService {
   async updateDebt(FournisseurId: string, amount: number): Promise<void> {
     await this.FournisseurModel.findByIdAndUpdate(FournisseurId, { $inc: { totalDebt: amount } });
   }
+
+
+
+
+
+  // Synchronise les fournisseurs d'un produit :
+// - ajoute le produit aux nouveaux fournisseurs sélectionnés
+// - le retire des fournisseurs désélectionnés
+
+
+  async syncProductToSuppliers(
+      productId: string,
+      productData: { name: string; unit?: string; purchasePrice?: number; tva?: number },
+      newSupplierIds: string[],
+      oldSupplierIds: string[],
+  ): Promise<void> {
+    const toAdd    = newSupplierIds.filter(id => !oldSupplierIds.includes(id));
+    const toRemove = oldSupplierIds.filter(id => !newSupplierIds.includes(id));
+
+    // Ajouter le produit aux nouveaux fournisseurs (si pas déjà présent)
+    if (toAdd.length > 0) {
+      await this.FournisseurModel.updateMany(
+          {
+            _id: { $in: toAdd.map(id => new Types.ObjectId(id)) },
+            'products._id': { $ne: new Types.ObjectId(productId) },
+          },
+          {
+            $push: {
+              products: {
+                _id: new Types.ObjectId(productId),
+                name: productData.name,
+                unit: productData.unit,
+                purchasePrice: productData.purchasePrice,
+                tva: productData.tva,
+              },
+            },
+          },
+      );
+    }
+
+    // Retirer le produit des fournisseurs désélectionnés
+    if (toRemove.length > 0) {
+      await this.FournisseurModel.updateMany(
+          { _id: { $in: toRemove.map(id => new Types.ObjectId(id)) } },
+          { $pull: { products: { _id: new Types.ObjectId(productId) } } },
+      );
+    }
+
+    // Mettre à jour le produit dans les fournisseurs déjà liés (si nom/prix changé)
+    const toUpdate = newSupplierIds.filter(id => oldSupplierIds.includes(id));
+    if (toUpdate.length > 0) {
+      await this.FournisseurModel.updateMany(
+          {
+            _id: { $in: toUpdate.map(id => new Types.ObjectId(id)) },
+            'products._id': new Types.ObjectId(productId),
+          },
+          {
+            $set: {
+              'products.$.name':          productData.name,
+              'products.$.unit':          productData.unit,
+              'products.$.purchasePrice': productData.purchasePrice,
+              'products.$.tva':           productData.tva,
+            },
+          },
+      );
+    }
+  }
+
 }
