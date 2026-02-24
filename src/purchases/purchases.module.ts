@@ -13,14 +13,14 @@ import { ExportModule } from '../export/export.module';
     MongooseModule.forFeature([
       { name: Purchase.name, schema: PurchaseSchema },
     ]),
-    forwardRef(() => FournisseursModule),
+
     forwardRef(() => ProductsModule),
+    forwardRef(() => FournisseursModule),
     forwardRef(() => PaymentAchatModule),
-    ExportModule,
+    ExportModule, // ✅ requis par PurchasesController → ExportService
   ],
   controllers: [PurchasesController],
   providers: [PurchasesService],
   exports: [PurchasesService],
-
 })
 export class PurchasesModule {}

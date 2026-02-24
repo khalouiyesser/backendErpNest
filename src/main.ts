@@ -1,41 +1,43 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestFastifyApplication>(
+        AppModule,
+        new FastifyAdapter({ logger: false }),
+    );
 
-  // CORS - autorise localhost ET l'IP réseau
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://192.168.1.176:3000',
-    ],
-    credentials: true,
-  });
+    // ✅ CORS via @fastify/cors (pas enableCors — incompatible avec Fastify)
+    await app.register(require('@fastify/cors'), {
+        origin: true, // autorise toutes les origines (dev uniquement)
+        credentials: true,
+    });
 
-  app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-  );
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+            transform: true,
+        }),
+    );
 
-  const config = new DocumentBuilder()
-      .setTitle('ERP System API')
-      .setDescription('API documentation for ERP System MVP')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    const config = new DocumentBuilder()
+        .setTitle('ERP System API')
+        .setDescription('API documentation for ERP System MVP')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
 
-  const port = process.env.PORT || 3001;
-  await app.listen(port, '0.0.0.0'); // 👈 écoute sur toutes les interfaces réseau
-  console.log(`🚀 ERP Backend running on: http://localhost:${port}`);
-  console.log(`🌐 Network access: http://192.168.1.176:${port}`);
-  console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+    // ✅ Cast as any pour éviter le conflit de types Swagger + Fastify
+    const document = SwaggerModule.createDocument(app as any, config);
+    SwaggerModule.setup('api/docs', app as any, document);
+
+    const port = process.env.PORT || 3001;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Server running on http://0.0.0.0:${port}`);
 }
+
 bootstrap();

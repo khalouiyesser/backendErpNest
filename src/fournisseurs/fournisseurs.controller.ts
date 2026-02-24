@@ -10,7 +10,7 @@ import {UpdateFournisseurDto} from "./dto/update-supplier.dto";
 @ApiTags('Fournisseurs')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('Fournisseurs')
+@Controller('fournisseurs')
 export class FournisseursController {
   constructor(private readonly FournisseursService: FournisseursService,
               private readonly purchaseService: PurchasesService,) {}

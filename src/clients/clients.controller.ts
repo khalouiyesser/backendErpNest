@@ -62,6 +62,11 @@ export class ClientsController {
     return this.clientsService.getClientStats(id, req.user.userId);
   }
 
+
+  @Get('/clientsYesser')
+  getClients() {
+    return this.clientsService.getClients();
+  }
   // ── Export bilan client ────────────────────────────────────────────────────
   @Get(':id/export')
   async exportBilan(

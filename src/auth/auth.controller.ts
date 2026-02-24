@@ -15,12 +15,9 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @ApiOperation({ summary: 'Login with email and password' })
   login(@Request() req, @Body() _loginDto: LoginDto) {
+    console.log('Login attempt for user:', _loginDto);
     return this.authService.login(req.user);
   }
-
-
-
-
 
 
   @Get('profile')

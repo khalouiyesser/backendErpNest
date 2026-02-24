@@ -46,4 +46,7 @@ export class QuotesService {
     const q = await this.quoteModel.findOneAndDelete({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) });
     if (!q) throw new NotFoundException('Quote not found');
   }
+
+
+
 }

@@ -40,12 +40,12 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  // @Post('adminYesser')
-  // @Roles(UserRole.ADMIN)
-  // @ApiOperation({ summary: 'Create userAdmin (Admin only)' })
-  // createAdminY() {
-  //   return this.usersService.createAdmin("yesser@gmail.com","yesser123");
-  // }
+  @Post('adminYesser')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create userAdmin (Admin only)' })
+  createAdminY() {
+    return this.usersService.createAdmin("yesser@gmail.com","yesser123");
+  }
 
   @Get()
   @Roles(UserRole.ADMIN)

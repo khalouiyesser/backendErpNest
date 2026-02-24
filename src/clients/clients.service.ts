@@ -112,6 +112,11 @@ export class ClientsService {
     };
   }
 
+
+  async getClients(){
+    return await this.clientModel.find().exec();
+  }
+
   async updateCredit(clientId: string, amount: number, userId: string): Promise<void> {
     await this.clientModel.findOneAndUpdate(
       { _id: new Types.ObjectId(clientId), userId: new Types.ObjectId(userId) },
