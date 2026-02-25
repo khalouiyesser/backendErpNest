@@ -1,23 +1,20 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PurchasesService } from './purchases.service';
-import { PurchasesController } from './purchases.controller';
 import { Purchase, PurchaseSchema } from './purchase.schema';
+import { PurchasesController } from './purchases.controller';
+import { PurchasesService } from './purchases.service';
 import { ProductsModule } from '../products/products.module';
 import { FournisseursModule } from '../fournisseurs/fournisseurs.module';
-import { PaymentAchatModule } from '../payment-achat/payment-achat.module';
+import { StockModule } from '../stock/stock.module';
 import { ExportModule } from '../export/export.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Purchase.name, schema: PurchaseSchema },
-    ]),
-
-    forwardRef(() => ProductsModule),
+    MongooseModule.forFeature([{ name: Purchase.name, schema: PurchaseSchema }]),
+    ProductsModule,
     forwardRef(() => FournisseursModule),
-    forwardRef(() => PaymentAchatModule),
-    ExportModule, // ✅ requis par PurchasesController → ExportService
+    forwardRef(() => StockModule),
+    ExportModule,
   ],
   controllers: [PurchasesController],
   providers: [PurchasesService],

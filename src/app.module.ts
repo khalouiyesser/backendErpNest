@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
+import { CompanyModule } from './company/company.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { FournisseursModule } from './fournisseurs/fournisseurs.module';
@@ -17,8 +18,13 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentAchatModule } from './payment-achat/payment-achat.module';
 import { PaymentVenteModule } from './payment-vente/payment-vente.module';
-import {VentesModule} from "./ventes/ventes.module";
+import { VentesModule } from './ventes/ventes.module';
 import { ExportModule } from './export/export.module';
+import { DeliveryModule } from './delivery/delivery.module';
+import { ReturnsModule } from './returns/returns.module';
+import { OcrModule } from './ocr/ocr.module';
+import { AdminModule } from './admin/admin.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -30,7 +36,9 @@ import { ExportModule } from './export/export.module';
       }),
       inject: [ConfigService],
     }),
+    CommonModule,
     AuthModule,
+    CompanyModule,
     UsersModule,
     ClientsModule,
     FournisseursModule,
@@ -48,6 +56,10 @@ import { ExportModule } from './export/export.module';
     PaymentAchatModule,
     PaymentVenteModule,
     ExportModule,
+    DeliveryModule,
+    ReturnsModule,
+    OcrModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

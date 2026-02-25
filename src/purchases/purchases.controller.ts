@@ -1,68 +1,34 @@
-import {
-  Controller, Get, Post, Body, Param, Delete,
-  UseGuards, Query, Request, Res, HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Query, Request, Res, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { PurchasesService } from './purchases.service';
-import { CreatePurchaseDto } from './dto/create-purchase.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ExportService } from '../export/export.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Purchases')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('purchases')
 export class PurchasesController {
-  constructor(
-      private readonly purchasesService: PurchasesService,
-      private readonly exportService: ExportService,
-  ) {}
+  constructor(private readonly purchasesService: PurchasesService, private readonly exportService: ExportService) {}
 
-  @Post()
-  create(@Body() dto: CreatePurchaseDto, @Request() req) {
-    return this.purchasesService.create(dto, req.user.userId);
+  @Post() create(@Body() dto: any, @Request() req) { return this.purchasesService.create(dto, req.user.userId, req.user.name, req.user.companyId); }
+  @Get() findAll(@Request() req, @Query('search') search?: string, @Query('status') status?: string, @Query('sortBy') sortBy?: string, @Query('sortOrder') sortOrder?: 'asc'|'desc') { return this.purchasesService.findAll(req.user.companyId, { search, status, sortBy, sortOrder }); }
+  @Get(':id') findOne(@Param('id') id: string, @Request() req) { return this.purchasesService.findOne(id, req.user.companyId); }
+
+  @Post(':id/payment')
+  @ApiOperation({ summary: 'Ajouter un paiement' })
+  addPayment(@Param('id') id: string, @Body() body: { amount: number }, @Request() req) {
+    return this.purchasesService.addPayment(id, req.user.companyId, body.amount, req.user.userId);
   }
 
-  @Get()
-  findAll(
-      @Request() req,
-      @Query('search') search?: string,
-      @Query('sortBy') sortBy?: string,
-      @Query('sortOrder') sortOrder?: 'asc' | 'desc',
-      @Query('status') status?: string,
-  ) {
-    return this.purchasesService.findAll(req.user.userId, { search, sortBy, sortOrder, status });
+  @Get(':id/export/pdf')
+  async exportPdf(@Param('id') id: string, @Request() req, @Res() res: Response) {
+    const purchase = await this.purchasesService.findOne(id, req.user.companyId);
+    const buffer = await this.exportService.generatePurchasePdf(purchase, req.user.companyId);
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="achat-${id}.pdf"` });
+    return res.status(HttpStatus.OK).end(buffer);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string, @Request() req) {
-    return this.purchasesService.findOne(id, req.user.userId);
-  }
-
-  // ── Bon de commande PDF ───────────────────────────────────────────────────
-  @Get(':id/invoice')
-  async getInvoice(@Param('id') id: string, @Request() req, @Res() res: Response) {
-    const purchase = await this.purchasesService.findOne(id, req.user.userId);
-    const pdfBuffer = await this.exportService.generatePurchaseInvoicePdf(purchase);
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="bon-achat-${id}.pdf"`,
-    });
-    res.status(HttpStatus.OK).end(pdfBuffer);
-  }
-
-  @Post(':id/payments')
-  addPayment(
-      @Param('id') id: string,
-      @Body() body: { amount: number; note?: string },
-      @Request() req,
-  ) {
-    return this.purchasesService.addPayment(id, req.user.userId, body.amount, body.note);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string, @Request() req) {
-    return this.purchasesService.remove(id, req.user.userId);
-  }
+  @Delete(':id') remove(@Param('id') id: string, @Request() req) { return this.purchasesService.remove(id, req.user.companyId); }
 }

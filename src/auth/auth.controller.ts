@@ -1,10 +1,8 @@
 import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LoginDto } from './dto/login.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -13,35 +11,31 @@ export class AuthController {
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
-  @ApiOperation({ summary: 'Login with email and password' })
-  login(@Request() req, @Body() _loginDto: LoginDto) {
-    console.log('Login attempt for user:', _loginDto);
-    return this.authService.login(req.user);
-  }
-
+  @ApiOperation({ summary: 'Connexion (email + mot de passe)' })
+  @ApiBody({ schema: { properties: { email: { type: 'string', example: 'admin@company.com' }, password: { type: 'string', example: 'Password123!' } } } })
+  login(@Request() req) { return this.authService.login(req.user); }
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
-  getProfile(@Request() req) {
-    return req.user;
-  }
-
-  // @Post('login')
-  // @UseGuards(LocalAuthGuard)
-  // @ApiOperation({ summary: 'Login with email and password' })
-  // creer (@Request() req, @Body() _loginDto: LoginDto) {
-  //   return this.authService.login(req.user);
-  // }
-
-
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Mon profil JWT décodé' })
+  getProfile(@Request() req) { return req.user; }
 
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change user password' })
-  changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(req.user.userId, dto.currentPassword, dto.newPassword);
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Changer mon mot de passe' })
+  changePassword(@Request() req, @Body() body: { currentPassword: string; newPassword: string }) {
+    return this.authService.changePassword(req.user.userId, body.currentPassword, body.newPassword);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Demander la réinitialisation du mot de passe' })
+  forgotPassword(@Body() body: { email: string }) { return this.authService.requestPasswordReset(body.email); }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Réinitialiser avec le code reçu par email' })
+  resetPassword(@Body() body: { email: string; token: string; newPassword: string }) {
+    return this.authService.resetPassword(body.email, body.token, body.newPassword);
   }
 }

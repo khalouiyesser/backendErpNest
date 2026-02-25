@@ -1,178 +1,88 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Purchase, PurchaseDocument } from './purchase.schema';
-import { CreatePurchaseDto } from './dto/create-purchase.dto';
+import { Purchase, PurchaseDocument, PurchaseStatus } from './purchase.schema';
 import { ProductsService } from '../products/products.service';
 import { FournisseursService } from '../fournisseurs/fournisseurs.service';
-import { PaymentAchatService } from '../payment-achat/payment-achat.service';
-import { PaymentAchatDocument } from '../payment-achat/entities/payment-achat.entity';
+import { StockService } from '../stock/stock.service';
+import { MovementType, MovementSource } from '../stock/stock-movement.schema';
 
 @Injectable()
 export class PurchasesService {
   constructor(
-      @InjectModel(Purchase.name) private purchaseModel: Model<PurchaseDocument>,
-      private productsService: ProductsService,
-      @Inject(forwardRef(() => FournisseursService)) private FournisseursService: FournisseursService,
-      private paymentAchatService: PaymentAchatService,
+    @InjectModel(Purchase.name) private purchaseModel: Model<PurchaseDocument>,
+    private productsService: ProductsService,
+    @Inject(forwardRef(() => FournisseursService)) private fournisseursService: FournisseursService,
+    @Inject(forwardRef(() => StockService)) private stockService: StockService,
   ) {}
 
-  async create(dto: CreatePurchaseDto, userId: string): Promise<PurchaseDocument> {
-    const Fournisseur = await this.FournisseursService.findOne(dto.FournisseurId, userId);
-
-    let totalHT = 0;
-    let totalTTC = 0;
-
-    const items = dto.items.map(item => {
+  async create(dto: any, userId: string, userName: string, companyId: string): Promise<PurchaseDocument> {
+    const fournisseur = await this.fournisseursService.findOne(dto.FournisseurId, companyId);
+    let totalHT = 0, totalTTC = 0;
+    const items = dto.items.map((item: any) => {
       const tva = item.tva || 0;
       const lineHT = item.quantity * item.unitPrice;
       const lineTTC = lineHT * (1 + tva / 100);
-      totalHT += lineHT;
-      totalTTC += lineTTC;
-
-      return {
-        productId: new Types.ObjectId(item.productId),
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        tva,
-        totalHT: lineHT,
-        totalTTC: lineTTC,
-      };
+      totalHT += lineHT; totalTTC += lineTTC;
+      return { productId: new Types.ObjectId(item.productId), productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, tva, totalHT: lineHT, totalTTC: lineTTC };
     });
-
     const initialPayment = dto.initialPayment || 0;
     const amountRemaining = totalTTC - initialPayment;
+    let status = PurchaseStatus.PENDING;
+    if (initialPayment >= totalTTC) status = PurchaseStatus.PAID;
+    else if (initialPayment > 0) status = PurchaseStatus.PARTIAL;
 
-    const purchase = new this.purchaseModel({
-      FournisseurId: new Types.ObjectId(dto.FournisseurId),
-      FournisseurName: Fournisseur.name,
-      items,
-      totalHT,
-      totalTTC,
-      amountPaid: initialPayment,
-      amountRemaining,
-      payments: [],
-      notes: dto.notes,
-      userId: new Types.ObjectId(userId),
-    });
+    const purchase = new this.purchaseModel({ FournisseurId: new Types.ObjectId(dto.FournisseurId), FournisseurName: fournisseur.name, items, totalHT, totalTTC, amountPaid: initialPayment, amountRemaining, status, notes: dto.notes, paymentMethod: dto.paymentMethod, companyId: new Types.ObjectId(companyId), createdBy: new Types.ObjectId(userId), createdByName: userName });
+    const saved = await purchase.save();
 
-    const savedPurchase = await purchase.save();
+    await this.fournisseursService.updateDebt(dto.FournisseurId, amountRemaining, companyId);
 
-    // Création automatique du paiement si initialPayment > 0
-    if (initialPayment > 0) {
-      const savedPayment = await this.paymentAchatService.createFromAchat(
-          userId,
-          dto.FournisseurId,
-          initialPayment,
-          savedPurchase._id.toString(),
-      );
-
-      savedPurchase.payments.push(savedPayment._id);
-      await savedPurchase.save();
-
-      await this.FournisseursService.updateDebt(dto.FournisseurId, amountRemaining);
-    } else {
-      await this.FournisseursService.updateDebt(dto.FournisseurId, amountRemaining);
-    }
-
-    // Mettre à jour le stock
     for (const item of dto.items) {
-      await this.productsService.updateStock(item.productId, item.quantity, 'add');
+      const product = await this.productsService.findOne(item.productId, companyId).catch(() => null);
+      const stockBefore = product?.stockQuantity ?? 0;
+      await this.productsService.updateStock(item.productId, item.quantity, 'add', companyId);
+      await this.stockService.recordMovement({ productId: item.productId, productName: item.productName, type: MovementType.IN, source: MovementSource.PURCHASE, quantity: item.quantity, stockBefore, stockAfter: stockBefore + item.quantity, referenceId: saved._id.toString(), notes: `Achat #${saved._id}`, userId, companyId });
     }
-
-    return savedPurchase;
+    return saved;
   }
 
-  async findAll(userId: string, query?: any): Promise<PurchaseDocument[]> {
-    const filter: any = { userId: new Types.ObjectId(userId) };
-    if (query?.search) filter.$or = [{ FournisseurName: { $regex: query.search, $options: 'i' } }];
+  async findAll(companyId: string, query?: any): Promise<PurchaseDocument[]> {
+    const filter: any = { companyId: new Types.ObjectId(companyId) };
+    if (query?.search) filter.FournisseurName = { $regex: query.search, $options: 'i' };
     if (query?.status) filter.status = query.status;
-    const sort: any = query?.sortBy
-        ? { [query.sortBy]: query.sortOrder === 'desc' ? -1 : 1 }
-        : { createdAt: -1 };
-    return this.purchaseModel.find(filter).sort(sort).populate('payments').exec();
+    const sort: any = query?.sortBy ? { [query.sortBy]: query.sortOrder === 'desc' ? -1 : 1 } : { createdAt: -1 };
+    return this.purchaseModel.find(filter).sort(sort).exec();
   }
 
-  async findOne(id: string, userId: string): Promise<PurchaseDocument> {
-    const purchase = await this.purchaseModel
-        .findOne({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) })
-        .populate('payments');
-    if (!purchase) throw new NotFoundException('Purchase not found');
-    return purchase;
+  async findOne(id: string, companyId: string): Promise<PurchaseDocument> {
+    const p = await this.purchaseModel.findOne({ _id: new Types.ObjectId(id), companyId: new Types.ObjectId(companyId) });
+    if (!p) throw new NotFoundException('Achat introuvable');
+    return p;
   }
 
-  async addPayment(id: string, userId: string, amount: number, note?: string): Promise<PurchaseDocument> {
-    const purchase = await this.findOne(id, userId);
-    if (amount > purchase.amountRemaining) throw new BadRequestException('Payment exceeds remaining balance');
-
-    // Utiliser PaymentAchatService pour créer le paiement
-    const savedPayment = await this.paymentAchatService.createFromAchat(
-        userId,
-        purchase.FournisseurId.toString(),
-        amount,
-        purchase._id.toString(),
-    );
-
-    // Mettre à jour purchase
-    purchase.payments.push(savedPayment._id);
+  async addPayment(id: string, companyId: string, amount: number, userId: string): Promise<PurchaseDocument> {
+    const purchase = await this.findOne(id, companyId);
+    if (amount > purchase.amountRemaining + 0.001) throw new BadRequestException('Le montant dépasse le reste à payer');
     purchase.amountPaid += amount;
-    purchase.amountRemaining -= amount;
-
-    await this.FournisseursService.updateDebt(purchase.FournisseurId.toString(), -amount);
-
+    purchase.amountRemaining = Math.max(0, purchase.amountRemaining - amount);
+    if (purchase.amountRemaining <= 0) purchase.status = PurchaseStatus.PAID;
+    else if (purchase.amountPaid > 0) purchase.status = PurchaseStatus.PARTIAL;
+    await this.fournisseursService.updateDebt(purchase.FournisseurId.toString(), -amount, companyId);
     return purchase.save();
   }
 
-  async remove(id: string, userId: string): Promise<void> {
-    const purchase = await this.purchaseModel.findOne({
-      _id: new Types.ObjectId(id),
-      userId: new Types.ObjectId(userId),
-    });
-    if (!purchase) throw new NotFoundException('Purchase not found');
-
-    // Supprimer les paiements associés via PaymentAchatService
-    for (const paymentId of purchase.payments) {
-      await this.paymentAchatService.remove(paymentId.toString(), userId);
-    }
-
-    // Mise à jour stock
+  async remove(id: string, companyId: string): Promise<void> {
+    const purchase = await this.purchaseModel.findOne({ _id: new Types.ObjectId(id), companyId: new Types.ObjectId(companyId) });
+    if (!purchase) throw new NotFoundException('Achat introuvable');
     for (const item of purchase.items) {
-      await this.productsService.updateStock(item.productId.toString(), item.quantity, 'subtract');
+      await this.productsService.updateStock(item.productId.toString(), item.quantity, 'subtract', companyId);
     }
-
     await this.purchaseModel.findByIdAndDelete(id);
   }
 
-
-  async getAchatByFournisseur(userId: string, fournisseurId: string) {
-
-    const purchases = await this.purchaseModel
-        .find({
-          FournisseurId: new Types.ObjectId(fournisseurId),
-          userId:        new Types.ObjectId(userId),
-        })
-        .sort({ createdAt: -1 })
-        .lean()
-        .exec();
-    let totalDebt = 0;
-    let totalPaid = 0;
-
-    for (const p of purchases) {
-      const ttc  = (p as any).totalTTC      || 0;
-      const paid = (p as any).amountPaid    || 0;
-      totalPaid += paid;
-      if ((p as any).status !== 'paid') {
-        totalDebt += ttc - paid;
-      }
-    }
-
-    return {
-      totalDebt,
-      totalPaid,
-      recentPurchases: purchases,   // tous les achats, pas seulement les 10 premiers
-    };
+  async findForExport(companyId: string, startDate?: string, endDate?: string) {
+    const filter: any = { companyId: new Types.ObjectId(companyId) };
+    if (startDate || endDate) { filter.createdAt = {}; if (startDate) filter.createdAt.$gte = new Date(startDate); if (endDate) filter.createdAt.$lte = new Date(endDate); }
+    return this.purchaseModel.find(filter).sort({ createdAt: -1 }).exec();
   }
-
-
 }

@@ -1,52 +1,39 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { FournisseursService } from './fournisseurs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import {PurchasesService} from "../purchases/purchases.service";
-import {CreateFournisseurDto} from "./dto/create-supplier.dto";
-import {FournisseursService} from "./fournisseurs.service";
-import {UpdateFournisseurDto} from "./dto/update-supplier.dto";
 
 @ApiTags('Fournisseurs')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('fournisseurs')
 export class FournisseursController {
-  constructor(private readonly FournisseursService: FournisseursService,
-              private readonly purchaseService: PurchasesService,) {}
+  constructor(private readonly fournisseursService: FournisseursService) {}
 
   @Post()
-  create(@Body() dto: CreateFournisseurDto, @Request() req) {
-    return this.FournisseursService.create(dto, req.user.userId);
+  @ApiOperation({ summary: 'Créer un fournisseur' })
+  create(@Body() dto: any, @Request() req) {
+    return this.fournisseursService.create(dto, req.user.userId, req.user.name, req.user.companyId);
   }
 
   @Get()
-  findAll(@Request() req, @Query('search') search?: string, @Query('sortBy') sortBy?: string, @Query('sortOrder') sortOrder?: 'asc' | 'desc') {
-    return this.FournisseursService.findAll(req.user.userId, { search, sortBy, sortOrder });
+  @ApiOperation({ summary: 'Lister les fournisseurs' })
+  findAll(@Request() req, @Query('search') search?: string, @Query('sortBy') sortBy?: string, @Query('sortOrder') sortOrder?: 'asc'|'desc') {
+    return this.fournisseursService.findAll(req.user.companyId, { search, sortBy, sortOrder });
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req) {
-    return this.FournisseursService.findOne(id, req.user.userId);
+    return this.fournisseursService.findOne(id, req.user.companyId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateFournisseurDto, @Request() req) {
-    return this.FournisseursService.update(id, req.user.userId, dto);
+  update(@Param('id') id: string, @Body() dto: any, @Request() req) {
+    return this.fournisseursService.update(id, req.user.companyId, dto, req.user.userId, req.user.name);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
-    return this.FournisseursService.remove(id, req.user.userId);
-  }
-
-  @Get('userId/:idUser/fournisseurId/:fournisseurId/purchases')
-  async getFournisseurPurchases(
-      @Param('idUser') idUser: string,
-      @Param('fournisseurId') fournisseurId: string,
-  ) {
-
-
-    return await this.purchaseService.getAchatByFournisseur(idUser, fournisseurId);
+    return this.fournisseursService.remove(id, req.user.companyId);
   }
 }

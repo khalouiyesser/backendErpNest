@@ -1,74 +1,32 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from './user.schema';
+import { User, UserDocument } from './user.schema';
 
 @ApiTags('Users')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('JWT')
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  @Post()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create user (Admin only)' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @Get('me')
+  @ApiOperation({ summary: 'Mon profil utilisateur' })
+  getMe(@Request() req) {
+    return this.userModel.findById(req.user.userId).select('-password').lean();
   }
 
-
-
-  @Post('admin')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create userAdmin (Admin only)' })
-  createAdmin(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
-
-  @Post('adminYesser')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create userAdmin (Admin only)' })
-  createAdminY() {
-    return this.usersService.createAdmin("yesser@gmail.com","yesser123");
-  }
-
-  @Get()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all users (Admin only)' })
-  findAll() {
-    return this.usersService.findAll();
-  }
-
-  @Get(':id')
-  @Roles(UserRole.ADMIN)
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
-  @Patch(':id')
-  @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @Patch('me')
+  @ApiOperation({ summary: 'Modifier mon profil' })
+  updateMe(
+    @Request() req,
+    @Body() dto: { name?: string; phone?: string; theme?: string; position?: string; avatarUrl?: string },
+  ) {
+    const allowed = ['name', 'phone', 'theme', 'position', 'avatarUrl'];
+    const update: Record<string, any> = {};
+    allowed.forEach(k => { if ((dto as any)[k] !== undefined) update[k] = (dto as any)[k]; });
+    return this.userModel.findByIdAndUpdate(req.user.userId, update, { new: true }).select('-password');
   }
 }

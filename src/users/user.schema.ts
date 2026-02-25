@@ -1,76 +1,54 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
+import { Document, Types } from 'mongoose';
 export type UserDocument = User & Document;
 
-export enum UserRole {
-  ADMIN = 'admin',
-  USER = 'user',
+
+export enum UserRole
+{
+  SYSTEM_ADMIN = 'system_admin',
+  ADMIN_COMPANY = 'admin_company',
+  RESOURCE = 'resource'
 }
 
-export enum SubscriptionStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  TRIAL = 'trial',
-  EXPIRED = 'expired',
-}
 
 @Schema({ timestamps: true })
 export class User {
   @Prop({ required: true })
   name: string;
-
-  @Prop({ required: true, unique: true, lowercase: true })
+  @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
-
   @Prop({ required: true })
   password: string;
-
-  @Prop({ required: true, unique: true })
-  phone: string;
-
-  @Prop({ type: String, enum: UserRole, default: UserRole.USER })
-  role: UserRole;
-
-  @Prop({ type: String, enum: SubscriptionStatus, default: SubscriptionStatus.TRIAL })
-  subscriptionStatus: SubscriptionStatus;
-
   @Prop()
-  subscriptionExpiresAt: Date;
-
+  phone: string;
+  @Prop({ type: String, enum: UserRole, default: UserRole.RESOURCE })
+  role: UserRole;
+  @Prop({ type: Types.ObjectId, ref: 'Company' })
+  companyId: Types.ObjectId;
+  @Prop() position: string;
   @Prop({ default: true })
   isActive: boolean;
-
   @Prop({ default: false })
   mustChangePassword: boolean;
-
-  @Prop({ default: 5 })
-  ocrAttemptsLeft: number;
-
-  @Prop({ type: Date, default: null })
-  ocrAttemptsResetAt: Date;
-
-  // Business settings
-  @Prop()
-  businessName: string;
-
-  @Prop()
-  taxId: string;
-
-  @Prop()
-  address: string;
-
   @Prop({ default: 'light' })
   theme: string;
-
-  @Prop({ default: '#2563EB' })
-  primaryColor: string;
-
   @Prop()
-  fiscalRegime: string;
-
+  avatarUrl: string;
+  @Prop({ type: Date })
+  lastLoginAt: Date;
+  @Prop({ default: 0 })
+  failedLoginAttempts: number;
+  @Prop({ type: Date })
+  lockedUntil: Date;
   @Prop()
-  activityType: string;
+  passwordResetToken: string;
+  @Prop()
+  ocrAttemptsLeft: number;
+  @Prop()
+  ocrAttemptsResetAt: Date;
+  @Prop({ type: Date })
+  passwordResetExpires: Date;
 }
-
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ companyId: 1 });

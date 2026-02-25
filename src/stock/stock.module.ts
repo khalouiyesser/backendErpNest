@@ -1,15 +1,11 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { StockService } from './stock.service';
-import { StockController } from './stock.controller';
 import { StockMovement, StockMovementSchema } from './stock-movement.schema';
-import { ProductsModule } from '../products/products.module';
+import { StockController } from './stock.controller';
+import { StockService } from './stock.service';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{ name: StockMovement.name, schema: StockMovementSchema }]),
-    ProductsModule,
-  ],
+  imports: [MongooseModule.forFeature([{ name: StockMovement.name, schema: StockMovementSchema }])],
   controllers: [StockController],
   providers: [StockService],
   exports: [StockService],

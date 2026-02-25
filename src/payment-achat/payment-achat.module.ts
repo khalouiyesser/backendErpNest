@@ -1,19 +1,13 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PaymentAchatService } from './payment-achat.service';
-import { PaymentAchatController } from './payment-achat.controller';
 import { PaymentAchat, PaymentAchatSchema } from './entities/payment-achat.entity';
-import { PurchasesModule } from '../purchases/purchases.module';
+import { PaymentAchatController } from './payment-achat.controller';
+import { PaymentAchatService } from './payment-achat.service';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: PaymentAchat.name, schema: PaymentAchatSchema },
-    ]),
-    forwardRef(() => PurchasesModule), // ⚡ résoudre dépendance circulaire
-  ],
+  imports: [MongooseModule.forFeature([{ name: PaymentAchat.name, schema: PaymentAchatSchema }])],
   controllers: [PaymentAchatController],
   providers: [PaymentAchatService],
-  exports: [PaymentAchatService], // exporter uniquement le service
+  exports: [PaymentAchatService],
 })
 export class PaymentAchatModule {}

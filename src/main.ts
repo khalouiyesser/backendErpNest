@@ -1,43 +1,52 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-    const app = await NestFactory.create<NestFastifyApplication>(
-        AppModule,
-        new FastifyAdapter({ logger: false }),
-    );
+  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
-    // ✅ CORS via @fastify/cors (pas enableCors — incompatible avec Fastify)
-    await app.register(require('@fastify/cors'), {
-        origin: true, // autorise toutes les origines (dev uniquement)
-        credentials: true,
-    });
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization',
+  });
 
-    app.useGlobalPipes(
-        new ValidationPipe({
-            whitelist: true,
-            forbidNonWhitelisted: true,
-            transform: true,
-        }),
-    );
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+    }),
+  );
 
-    const config = new DocumentBuilder()
-        .setTitle('ERP System API')
-        .setDescription('API documentation for ERP System MVP')
-        .setVersion('1.0')
-        .addBearerAuth()
-        .build();
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-    // ✅ Cast as any pour éviter le conflit de types Swagger + Fastify
-    const document = SwaggerModule.createDocument(app as any, config);
-    SwaggerModule.setup('api/docs', app as any, document);
+  const config = new DocumentBuilder()
+    .setTitle('ERP API — Système Multi-Company')
+    .setDescription('Backend ERP complet avec OCR, rôles, abonnements et exports PDF/Excel')
+    .setVersion('2.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+    .addTag('Auth').addTag('System Admin').addTag('Company').addTag('Users')
+    .addTag('Clients').addTag('Fournisseurs').addTag('Products')
+    .addTag('Ventes').addTag('Purchases').addTag('Quotes')
+    .addTag('Charges').addTag('Employees').addTag('Stock')
+    .addTag('Accounting').addTag('Dashboard').addTag('Reports')
+    .addTag('OCR').addTag('Notifications')
+    .addTag('Deliveries').addTag('Returns')
+    .addTag('Payments Vente').addTag('Payments Achat')
+    .build();
 
-    const port = process.env.PORT || 3001;
-    await app.listen(port, '0.0.0.0');
-    console.log(`🚀 Server running on http://0.0.0.0:${port}`);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`🚀 Serveur: http://localhost:${port}`);
+  logger.log(`📚 Swagger: http://localhost:${port}/api`);
 }
-
 bootstrap();

@@ -5,27 +5,38 @@ import { Employee, EmployeeDocument } from './employee.schema';
 
 @Injectable()
 export class EmployeesService {
-  constructor(@InjectModel(Employee.name) private empModel: Model<EmployeeDocument>) {}
-  async create(dto: any, userId: string) { return new this.empModel({ ...dto, userId: new Types.ObjectId(userId) }).save(); }
-  async findAll(userId: string, query?: any) {
-    const filter: any = { userId: new Types.ObjectId(userId) };
-    if (query?.search) filter.$or = [{ firstName: { $regex: query.search, $options: 'i' } }, { lastName: { $regex: query.search, $options: 'i' } }, { position: { $regex: query.search, $options: 'i' } }];
-    if (query?.isActive !== undefined) filter.isActive = query.isActive;
-    const sort: any = query?.sortBy ? { [query.sortBy]: query.sortOrder === 'desc' ? -1 : 1 } : { createdAt: -1 };
-    return this.empModel.find(filter).sort(sort).exec();
+  constructor(@InjectModel(Employee.name) private employeeModel: Model<EmployeeDocument>) {}
+
+  async create(dto: any, userId: string, userName: string, companyId: string) {
+    const e = new this.employeeModel({ ...dto, companyId: new Types.ObjectId(companyId), createdBy: new Types.ObjectId(userId), createdByName: userName });
+    return e.save();
   }
-  async findOne(id: string, userId: string) {
-    const e = await this.empModel.findOne({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) });
-    if (!e) throw new NotFoundException('Employee not found');
+
+  async findAll(companyId: string, query?: any) {
+    const filter: any = { companyId: new Types.ObjectId(companyId) };
+    if (query?.search) filter.$or = [{ name: { $regex: query.search, $options: 'i' } }, { position: { $regex: query.search, $options: 'i' } }];
+    return this.employeeModel.find(filter).sort({ name: 1 }).exec();
+  }
+
+  async findOne(id: string, companyId: string) {
+    const e = await this.employeeModel.findOne({ _id: new Types.ObjectId(id), companyId: new Types.ObjectId(companyId) });
+    if (!e) throw new NotFoundException('Employé introuvable');
     return e;
   }
-  async update(id: string, userId: string, dto: any) {
-    const e = await this.empModel.findOneAndUpdate({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) }, dto, { new: true });
-    if (!e) throw new NotFoundException('Employee not found');
+
+  async update(id: string, companyId: string, dto: any) {
+    const e = await this.employeeModel.findOneAndUpdate({ _id: new Types.ObjectId(id), companyId: new Types.ObjectId(companyId) }, dto, { new: true });
+    if (!e) throw new NotFoundException('Employé introuvable');
     return e;
   }
-  async remove(id: string, userId: string) {
-    const e = await this.empModel.findOneAndDelete({ _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) });
-    if (!e) throw new NotFoundException('Employee not found');
+
+  async remove(id: string, companyId: string) {
+    const e = await this.employeeModel.findOneAndDelete({ _id: new Types.ObjectId(id), companyId: new Types.ObjectId(companyId) });
+    if (!e) throw new NotFoundException('Employé introuvable');
+  }
+
+  async getSalaryTotal(companyId: string): Promise<number> {
+    const result = await this.employeeModel.aggregate([{ $match: { companyId: new Types.ObjectId(companyId), isActive: true } }, { $group: { _id: null, total: { $sum: '$salary' } } }]);
+    return result[0]?.total || 0;
   }
 }

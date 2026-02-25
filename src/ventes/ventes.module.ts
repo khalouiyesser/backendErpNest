@@ -1,8 +1,8 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Vente, Venteschema } from './vente.schema';
-import { VenteController } from './vente.controller';
 import { VentesService } from './ventes.service';
+import { VenteController } from './vente.controller';
+import { Vente, Venteschema } from './vente.schema';
 import { ProductsModule } from '../products/products.module';
 import { ClientsModule } from '../clients/clients.module';
 import { PaymentVenteModule } from '../payment-vente/payment-vente.module';

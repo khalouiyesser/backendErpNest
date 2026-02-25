@@ -1,74 +1,46 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Query,
-  Request,
-  Res,
-  HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, Res, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ClientsService } from './clients.service';
-import { CreateClientDto } from './dto/create-client.dto';
-import { UpdateClientDto } from './dto/update-client.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ExportService } from '../export/export.service';
-import { VentesService } from '../ventes/ventes.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Clients')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('clients')
 export class ClientsController {
   constructor(
     private readonly clientsService: ClientsService,
     private readonly exportService: ExportService,
-    private readonly ventesService: VentesService,
   ) {}
 
   @Post()
-  create(@Body() createClientDto: CreateClientDto, @Request() req) {
-    return this.clientsService.create(createClientDto, req.user.userId);
+  @ApiOperation({ summary: 'Créer un client' })
+  create(@Body() dto: any, @Request() req) {
+    return this.clientsService.create(dto, req.user.userId, req.user.name, req.user.companyId);
   }
 
   @Get()
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'sortBy', required: false })
-  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
-  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiOperation({ summary: 'Lister les clients' })
   findAll(
     @Request() req,
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
-    @Query('isActive') isActive?: boolean,
+    @Query('isActive') isActive?: string,
   ) {
-    return this.clientsService.findAll(req.user.userId, {
-      search,
-      sortBy,
-      sortOrder,
-      isActive,
-    });
+    return this.clientsService.findAll(req.user.companyId, { search, sortBy, sortOrder, isActive });
   }
 
   @Get(':id/stats')
-  async getStats(@Param('id') id: string, @Request() req) {
-    return this.clientsService.getClientStats(id, req.user.userId);
+  @ApiOperation({ summary: 'Statistiques client' })
+  getStats(@Param('id') id: string, @Request() req) {
+    return this.clientsService.getClientStats(id, req.user.companyId);
   }
 
-
-  @Get('/clientsYesser')
-  getClients() {
-    return this.clientsService.getClients();
-  }
-  // ── Export bilan client ────────────────────────────────────────────────────
   @Get(':id/export')
+  @ApiOperation({ summary: 'Exporter bilan client' })
   async exportBilan(
     @Param('id') id: string,
     @Request() req,
@@ -77,57 +49,34 @@ export class ClientsController {
     @Query('endDate') endDate?: string,
     @Res() res?: Response,
   ) {
-    const client = await this.clientsService.findOne(id, req.user.userId);
-    const sales = await this.ventesService.findByClientForExport(
-      id,
-      req.user.userId,
-      startDate,
-      endDate,
-    );
+    const client = await this.clientsService.findOne(id, req.user.companyId);
+    const sales = await this.clientsService.findByClientForExport(id, req.user.companyId, startDate, endDate);
 
     if (format === 'xlsx') {
-      const buffer = await this.exportService.generateClientBilanExcel(
-        client,
-        sales,
-        startDate,
-        endDate,
-      );
-      res.set({
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="bilan-${client.name}.xlsx"`,
-      });
+      const buffer = await this.exportService.generateClientBilanExcel(client, sales, startDate, endDate, req.user.companyId);
+      res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="bilan-${client.name}.xlsx"` });
       return res.status(HttpStatus.OK).end(buffer);
     }
-
-    const buffer = await this.exportService.generateClientBilanPdf(
-      client,
-      sales,
-      startDate,
-      endDate,
-    );
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="bilan-${client.name}.pdf"`,
-    });
+    const buffer = await this.exportService.generateClientBilanPdf(client, sales, startDate, endDate, req.user.companyId);
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="bilan-${client.name}.pdf"` });
     return res.status(HttpStatus.OK).end(buffer);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtenir un client' })
   findOne(@Param('id') id: string, @Request() req) {
-    return this.clientsService.findOne(id, req.user.userId);
+    return this.clientsService.findOne(id, req.user.companyId);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateClientDto: UpdateClientDto,
-    @Request() req,
-  ) {
-    return this.clientsService.update(id, req.user.userId, updateClientDto);
+  @ApiOperation({ summary: 'Modifier un client' })
+  update(@Param('id') id: string, @Body() dto: any, @Request() req) {
+    return this.clientsService.update(id, req.user.companyId, dto, req.user.userId, req.user.name);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Supprimer un client' })
   remove(@Param('id') id: string, @Request() req) {
-    return this.clientsService.remove(id, req.user.userId);
+    return this.clientsService.remove(id, req.user.companyId);
   }
 }
